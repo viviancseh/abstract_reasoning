@@ -43,7 +43,10 @@ class BIDSdata:
     """Convert lab EEG, behavior, and eye-tracking recordings into a BIDS tree."""
 
     BIDS_VERSION = "1.11.1"
-    DATASET_NAME = "Abstract pattern completion EEG and eye-tracking dataset"
+    DATASET_NAME = (
+        "Human Neurocognition During Abstract Reasoning: EEG and Eye-Tracking Dataset"
+    )
+    EEG_ANONYMIZE = {"daysback": 40000, "keep_his": False, "keep_source": False}
     ET_DATATYPE = "eeg"
     LEGACY_ET_DATATYPE = "func"
     CALIBRATION_ERROR_KEYS = ("AverageCalibrationError", "MaximalCalibrationError")
@@ -137,7 +140,9 @@ class BIDSdata:
         return value
 
     @staticmethod
-    def _get_bids_session_row(sess_dir: Path, sess_id: str) -> dict[str, Any] | None:
+    def _get_bids_session_row(
+        sess_dir: Path, sess_id: str, include_session_notes: bool = True
+    ) -> dict[str, Any] | None:
         """Read one raw session info JSON file and convert it into a sessions.tsv row."""
         sess_info_files = sorted(sess_dir.glob("*sess_info.json"))
         if not sess_info_files:
@@ -163,8 +168,46 @@ class BIDSdata:
                 sess_info.get("window_size")
             ),
             "img_size": BIDSdata._format_bids_session_value(sess_info.get("img_size")),
-            "notes": BIDSdata._format_bids_session_value(sess_info.get("Notes", "")),
+            "notes": (
+                BIDSdata._format_bids_session_value(sess_info.get("Notes", ""))
+                if include_session_notes
+                else ""
+            ),
         }
+
+    @staticmethod
+    def _add_session_day_offsets(
+        session_rows: list[dict[str, Any]],
+    ) -> list[dict[str, Any]]:
+        """Add relative session day offsets from private per-session acquisition times."""
+        rows = [dict(row) for row in session_rows]
+        parsed_times = []
+        for row in rows:
+            acq_time = row.pop("_acq_time", None)
+            parsed_times.append(pd.to_datetime(acq_time, utc=True, errors="coerce"))
+
+        valid_times = [time for time in parsed_times if pd.notna(time)]
+        first_time = min(valid_times) if valid_times else None
+        previous_time = None
+
+        for row, acq_time in sorted(
+            zip(rows, parsed_times), key=lambda item: item[0]["session_id"]
+        ):
+            if first_time is None or pd.isna(acq_time):
+                row["days_since_first_session"] = "n/a"
+                row["days_since_previous_session"] = "n/a"
+                continue
+
+            row["days_since_first_session"] = int((acq_time - first_time).days)
+            if previous_time is None:
+                row["days_since_previous_session"] = "n/a"
+            else:
+                row["days_since_previous_session"] = int(
+                    (acq_time - previous_time).days
+                )
+            previous_time = acq_time
+
+        return rows
 
     @staticmethod
     def _write_bids_sessions_file(
@@ -177,8 +220,9 @@ class BIDSdata:
         subj_bids_dir = bids_root / f"sub-{subj_id}"
         subj_bids_dir.mkdir(exist_ok=True, parents=True)
 
+        public_session_rows = BIDSdata._add_session_day_offsets(session_rows)
         sessions_df = (
-            pd.DataFrame(session_rows)
+            pd.DataFrame(public_session_rows)
             .drop_duplicates(subset=["session_id"], keep="last")
             .sort_values("session_id")
         )
@@ -208,6 +252,21 @@ class BIDSdata:
                 "Description": "Distance from the tracked eye to the display during the session.",
                 "Units": "mm",
             },
+            "days_since_first_session": {
+                "Description": (
+                    "Number of days between this session and the participant's "
+                    "first recorded session. Preserves relative session timing "
+                    "without exposing absolute acquisition dates."
+                ),
+                "Units": "days",
+            },
+            "days_since_previous_session": {
+                "Description": (
+                    "Number of days between this session and the participant's "
+                    "previous recorded session. The first recorded session is n/a."
+                ),
+                "Units": "days",
+            },
             "window_size": {
                 "Description": "Stimulus presentation window size in pixels, encoded as WIDTHxHEIGHT."
             },
@@ -215,7 +274,10 @@ class BIDSdata:
                 "Description": "Stimulus image size in pixels, encoded as WIDTHxHEIGHT."
             },
             "notes": {
-                "Description": "Free-text session notes with direct identifying information removed."
+                "Description": (
+                    "Free-text session notes from the source session-info file. "
+                    "This field can be omitted during conversion for anonymization."
+                )
             },
         }
 
@@ -334,14 +396,19 @@ class BIDSdata:
         bids_root.mkdir(exist_ok=True, parents=True)
         description_path = bids_root / "dataset_description.json"
 
-        if description_path.exists():
+        template_path = PACKAGE_DIR / "bids_converter" / "dataset_description.json"
+        if template_path.exists():
+            description = read_file(template_path)
+        elif description_path.exists():
             description = read_file(description_path)
         else:
             description = {}
 
-        description.setdefault("Name", dataset_name or BIDSdata.DATASET_NAME)
+        description["Name"] = dataset_name or description.get(
+            "Name", BIDSdata.DATASET_NAME
+        )
         description["BIDSVersion"] = bids_version or BIDSdata.BIDS_VERSION
-        description.setdefault("DatasetType", "raw")
+        description["DatasetType"] = description.get("DatasetType", "raw")
         if not isinstance(description.get("GeneratedBy"), list):
             description["GeneratedBy"] = []
 
@@ -359,6 +426,21 @@ class BIDSdata:
             )
 
         BIDSdata._write_json(description_path, description)
+
+    @staticmethod
+    def _write_readme(bids_root: Path, bids_version: str | None = None) -> None:
+        """Write the dataset README template at the BIDS root."""
+        template_path = PACKAGE_DIR / "bids_converter" / "README.md"
+        if not template_path.exists():
+            return
+
+        readme = template_path.read_text()
+        readme = readme.replace(
+            "**BIDS Version:** 1.11.1",
+            f"**BIDS Version:** {bids_version or BIDSdata.BIDS_VERSION}",
+        )
+        bids_root.mkdir(exist_ok=True, parents=True)
+        (bids_root / "README.md").write_text(readme)
 
     @staticmethod
     def _write_openneuro_bidsignore(bids_root: Path) -> None:
@@ -631,6 +713,38 @@ class BIDSdata:
         BIDSdata._write_json(eeg_json, sidecar)
 
     @staticmethod
+    def _anonymize_scans_tsv(scans_tsv: Path) -> None:
+        """Remove acquisition timestamps from a BIDS scans.tsv file."""
+        if not scans_tsv.exists():
+            return
+        scans = pd.read_csv(scans_tsv, sep="\t", dtype=str)
+        if "acq_time" in scans.columns:
+            scans["acq_time"] = "n/a"
+        if "source" in scans.columns:
+            scans.drop(columns=["source"], inplace=True)
+        scans.to_csv(scans_tsv, sep="\t", index=False, na_rep="n/a")
+
+    @staticmethod
+    def _read_scans_acq_time(scans_tsv: Path) -> str | None:
+        """Read the first acquisition timestamp from a scans.tsv file."""
+        if not scans_tsv.exists():
+            return None
+        scans = pd.read_csv(scans_tsv, sep="\t", dtype=str)
+        if "acq_time" not in scans.columns or scans.empty:
+            return None
+        acq_times = scans["acq_time"].dropna()
+        acq_times = acq_times[~acq_times.isin(["", "n/a"])]
+        if acq_times.empty:
+            return None
+        return str(acq_times.iloc[0])
+
+    @staticmethod
+    def _anonymize_all_scans_tsvs(bids_root: Path) -> None:
+        """Remove acquisition timestamps from all scans.tsv files in a BIDS tree."""
+        for scans_tsv in Path(bids_root).glob("sub-*/ses-*/sub-*_ses-*_scans.tsv"):
+            BIDSdata._anonymize_scans_tsv(scans_tsv)
+
+    @staticmethod
     def _patch_beh_sidecar(
         beh_json: Path, task_name: str, column_metadata: dict[str, Any] | None = None
     ) -> None:
@@ -697,6 +811,7 @@ class BIDSdata:
         BIDSdata._write_dataset_description(
             bids_root=bids_root, task_name=task_name, bids_version=bids_version
         )
+        BIDSdata._write_readme(bids_root=bids_root, bids_version=bids_version)
         if not write_bidsignore:
             return
         BIDSdata._write_openneuro_bidsignore(bids_root=bids_root)
@@ -890,9 +1005,24 @@ class BIDSdata:
         return removed
 
     @staticmethod
+    def _macos_metadata_copy_ignore(directory: str, names: list[str]) -> set[str]:
+        """Return macOS metadata names that should be skipped during copytree."""
+        return {
+            name
+            for name in names
+            if name == ".DS_Store" or name == "__MACOSX" or name.startswith("._")
+        }
+
+    @staticmethod
     def _remove_macos_metadata_files(bids_root: Path) -> int:
-        """Delete macOS AppleDouble, .DS_Store, and __MACOSX files from a BIDS tree."""
-        return BIDSdata.clean_macos_metadata_files(bids_root)
+        """Report macOS metadata artifacts without deleting them during conversion."""
+        artifacts = BIDSdata.iter_macos_metadata_files(bids_root)
+        if artifacts:
+            logger.info(
+                f"Ignoring {len(artifacts)} macOS metadata artifact(s) under "
+                f"{bids_root}. Run scripts/clean_macos_metadata.py to delete them."
+            )
+        return len(artifacts)
 
     @staticmethod
     def _copy_extra_data_tree(
@@ -925,8 +1055,11 @@ class BIDSdata:
             shutil.rmtree(destination_dir)
 
         destination_dir.parent.mkdir(exist_ok=True, parents=True)
-        shutil.copytree(source_dir, destination_dir)
-        BIDSdata.clean_macos_metadata_files(destination_dir)
+        shutil.copytree(
+            source_dir,
+            destination_dir,
+            ignore=BIDSdata._macos_metadata_copy_ignore,
+        )
         return destination_dir
 
     @staticmethod
@@ -960,6 +1093,11 @@ class BIDSdata:
         bids_root = Path(bids_root)
         destination_name = BIDSdata._validate_extra_data_destination_name(
             name or source_dir.name, "sourcedata"
+        )
+        logger.warning(
+            "Including sourcedata copies original files without anonymizing their "
+            "contents. Review source files for acquisition dates, subject/session "
+            "notes, machine paths, and other identifiers before public upload."
         )
 
         return BIDSdata._copy_extra_data_tree(
@@ -1235,6 +1373,7 @@ class BIDSdata:
             bids_version=BIDSdata.BIDS_VERSION,
             write_bidsignore=openneuro_compat,
         )
+        BIDSdata._anonymize_all_scans_tsvs(bids_root)
 
         metadata = read_file(et_meta_path) if et_meta_path is not None else {}
         session_rows = BIDSdata._read_bids_session_rows(bids_root)
@@ -1308,6 +1447,7 @@ class BIDSdata:
         """Run final whole-dataset cleanup and metadata patching after conversion."""
         BIDSdata._remove_macos_metadata_files(bids_root)
         BIDSdata._prepare_bids_root(bids_root=bids_root, task_name=task_name)
+        BIDSdata._anonymize_all_scans_tsvs(bids_root)
         BIDSdata._move_legacy_eye_tracking_outputs(
             bids_root=bids_root, task_name=task_name
         )
@@ -1345,6 +1485,7 @@ class BIDSdata:
         mne_verbose: str = "WARNING",
         pbar: bool = True,
         bids_write_lock: Any | None = None,
+        include_session_notes: bool = True,
     ):
         """Convert all available sessions for one raw lab subject directory.
 
@@ -1393,7 +1534,9 @@ class BIDSdata:
             sess_id = f"{sess_N:02}"
 
             session_row = BIDSdata._get_bids_session_row(
-                sess_dir=sess_dir, sess_id=sess_id
+                sess_dir=sess_dir,
+                sess_id=sess_id,
+                include_session_notes=include_session_notes,
             )
             if session_row is not None:
                 session_rows.append(session_row)
@@ -1465,6 +1608,7 @@ class BIDSdata:
                     raw_eeg,
                     eeg_bids_path,
                     event_id=event_id,
+                    anonymize=BIDSdata.EEG_ANONYMIZE,
                     overwrite=True,
                 )
                 # raw_eeg, eeg_bids_path, event_id=c.VALID_EVENTS, overwrite=True
@@ -1491,6 +1635,18 @@ class BIDSdata:
                 )
                 if eeg_json.exists():
                     BIDSdata._patch_eeg_sidecar(eeg_json, task_name=task_name)
+
+                scans_tsv = (
+                    bids_root
+                    / f"sub-{subj_id}"
+                    / f"ses-{sess_id}"
+                    / f"sub-{subj_id}_ses-{sess_id}_scans.tsv"
+                )
+                if session_row is not None:
+                    session_row["_acq_time"] = BIDSdata._read_scans_acq_time(
+                        scans_tsv
+                    )
+                BIDSdata._anonymize_scans_tsv(scans_tsv)
 
             except Exception as e:
                 errors.append((f"sub-{subj_id}_ses{sess_id}", "eeg"))
@@ -1637,6 +1793,7 @@ class BIDSdata:
         task_name: str,
         mne_verbose: str,
         bids_write_lock: Any,
+        include_session_notes: bool,
     ) -> tuple[list, str, str]:
         """Convert one subject while capturing noisy child-process console output."""
         stdout = io.StringIO()
@@ -1652,6 +1809,7 @@ class BIDSdata:
                 mne_verbose=mne_verbose,
                 pbar=False,
                 bids_write_lock=bids_write_lock,
+                include_session_notes=include_session_notes,
             )
 
         return errors, stdout.getvalue(), stderr.getvalue()
@@ -1684,6 +1842,7 @@ class BIDSdata:
         overwrite_extra_data: bool = False,
         n_jobs: int = 1,
         openneuro_compat: bool = False,
+        include_session_notes: bool = True,
     ):
         """Convert every subj_* directory and optionally attach extra BIDS data.
 
@@ -1693,6 +1852,8 @@ class BIDSdata:
         ``n_jobs`` controls subject-level multiprocessing; shared BIDS writes
         are locked when ``n_jobs`` is greater than one. ``openneuro_compat``
         adds validator compatibility metadata such as .bidsignore patterns.
+        ``include_session_notes`` controls whether free-text source session notes
+        are retained in the public sessions.tsv files.
         """
         if n_jobs < 1:
             raise ValueError("n_jobs must be >= 1.")
@@ -1721,6 +1882,7 @@ class BIDSdata:
                     task_name=task_name,
                     mne_verbose=mne_verbose,
                     pbar=pbar,
+                    include_session_notes=include_session_notes,
                 )
                 errors[subj_dir.name] = subj_errors
         else:
@@ -1739,6 +1901,7 @@ class BIDSdata:
                             task_name=task_name,
                             mne_verbose=mne_verbose,
                             bids_write_lock=bids_write_lock,
+                            include_session_notes=include_session_notes,
                         ): subj_dir.name
                         for subj_dir in subj_dirs
                     }

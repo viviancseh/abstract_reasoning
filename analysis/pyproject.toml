@@ -69,6 +69,7 @@ dependencies = [
     "beautifulsoup4>=4.13.4",
     "openneuro-py>=2026.4.1",
     "marimo>=0.23.8",
+    "python-dotenv>=1.2.2",
 ]
 
 [tool.uv.sources]

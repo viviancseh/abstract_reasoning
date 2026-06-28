@@ -1,0 +1,38 @@
+{
+    "Name": "Human Neurocognition During Abstract Reasoning: EEG and Eye-Tracking Dataset",
+    "BIDSVersion": "1.11.1",
+    "DatasetType": "raw",
+    "DatasetDOI": "doi:10.18112/openneuro.ds007960.v1.0.1",
+    "License": "CC0",
+    "Authors": [
+        "Pinier, C.",
+        "Vargas, S. A.",
+        "Steeghs-Turchina, M.",
+        "Matzke, D.",
+        "Stevenson, C. E.",
+        "Nunez, M. D."
+    ],
+    "Acknowledgements": "This research was supported by the University of Amsterdam. We thank all participants who contributed their data to this study.",
+    "HowToAcknowledge": "Please cite this work as: Pinier, C., Vargas, S. A., Steeghs-Turchina, M., Matzke, D., Stevenson, C. E., & Nunez, M. D. (2025). Large Language Models Show Signs of Alignment with Human Neurocognition During Abstract Reasoning. arXiv preprint arXiv:2508.10057.",
+    "Funding": [
+        "Supported by the University of Amsterdam"
+    ],
+    "EthicsApprovals": [
+        "Ethics Review Board (FMG-UvA), University of Amsterdam, The Netherlands, approved 19-06-2024"
+    ],
+    "ReferencesAndLinks": [
+        "https://arxiv.org/abs/2508.10057",
+        "https://2025.ccneuro.org/abstract_pdf/Pinier_2025_Moderate_evidence_large_language_models_reflecting.pdf",
+        "https://2024.ccneuro.org/pdf/123_Paper_authored_Are-LLMs-tools-to-understand-human-neurocognition-during-abstract-reasoning.pdf"
+    ],
+    "Keywords": [
+        "neuroscience",
+        "EEG",
+        "abstract reasoning",
+        "visual analogy",
+        "large language models",
+        "computational neuroscience",
+        "representational similarity analysis",
+        "event-related potentials"
+    ]
+}

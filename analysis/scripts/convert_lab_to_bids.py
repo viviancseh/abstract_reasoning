@@ -172,6 +172,14 @@ def parse_args() -> argparse.Namespace:
             "patterns for eye-tracking physio event files."
         ),
     )
+    parser.add_argument(
+        "--omit-session-notes",
+        action="store_true",
+        help=(
+            "Do not copy free-text source session notes into sessions.tsv. "
+            "By default notes are retained."
+        ),
+    )
     return parser.parse_args()
 
 
@@ -209,6 +217,7 @@ def main() -> None:
         overwrite_extra_data=args.overwrite_extra_data,
         n_jobs=args.n_jobs,
         openneuro_compat=args.openneuro_compat,
+        include_session_notes=not args.omit_session_notes,
     )
     print(errors)
 
