@@ -1,0 +1,33 @@
+{
+    "stim_IDs": {
+        "and": 0,
+        "angle-up": 1,
+        "asterisk": 2,
+        "at": 3,
+        "dollar-sign": 4,
+        "equals": 5,
+        "exclamation": 6,
+        "greater-than": 7,
+        "hashtag": 8,
+        "less-than": 9,
+        "minus": 10,
+        "percent": 11,
+        "plus": 12,
+        "quote": 13,
+        "slash": 14,
+        "tilde": 15
+    },
+    "pattern_IDs": {
+        "AAABAAAB": 0,
+        "ABABCDCD": 1,
+        "ABBAABBA": 2,
+        "ABBACDDC": 3,
+        "ABBCABBC": 4,
+        "ABCAABCA": 5,
+        "ABCABCAB": 6,
+        "ABCDDCBA": 7,
+        "ABCDEDCB": 8,
+        "ABCDEEDC": 9,
+        "ABCDEFGH": 10
+    }
+}

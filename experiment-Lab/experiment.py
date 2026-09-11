@@ -150,7 +150,10 @@ def win_flip(
     """
     win.mouseVisible = cursor
     win.winHandle.set_mouse_visible(cursor)
-    win.winHandle.set_mouse_position(-1, -1)
+    try:
+        win.winHandle.set_mouse_position(-1, -1)
+    except AttributeError:
+        pass
     win.fillColor = bg_color
     win.flip(clearBuffer=clear)
 
@@ -616,28 +619,28 @@ def run_trial(
     win_flip(win)
 
     # * Displaying Sequence items one by one
-    display_images_sequentially(
-        win=win,
-        images=sequence_imgs,
-        eeg_device=eeg_device,
-        eye_tracker=eye_tracker,
-        event_name="stim-flash_sequence",
-        fix_cross=None,
-        pres_duration=timings.pres_duration,
-        order=trial["seq_order"],
-    )
+    # display_images_sequentially(
+    #     win=win,
+    #     images=sequence_imgs,
+    #     eeg_device=eeg_device,
+    #     eye_tracker=eye_tracker,
+    #     event_name="stim-flash_sequence",
+    #     fix_cross=None,
+    #     pres_duration=timings.pres_duration,
+    #     order=trial["seq_order"],
+    # )
 
     # * Displaying Choice items one by one
-    display_images_sequentially(
-        win=win,
-        images=avail_choices_imgs,
-        eeg_device=eeg_device,
-        eye_tracker=eye_tracker,
-        event_name="stim-flash_choices",
-        fix_cross=None,
-        pres_duration=timings.pres_duration,
-        order=trial["choice_order"],
-    )
+    # display_images_sequentially(
+    #     win=win,
+    #     images=avail_choices_imgs,
+    #     eeg_device=eeg_device,
+    #     eye_tracker=eye_tracker,
+    #     event_name="stim-flash_choices",
+    #     fix_cross=None,
+    #     pres_duration=timings.pres_duration,
+    #     order=trial["choice_order"],
+    # )
 
     series_end_time = global_clock.getTime()
 
@@ -803,8 +806,13 @@ def init_experiment(
     height_factor = 3
     max_height = resolution[1] / height_factor
 
+    # imgs_info = prepare_images(
+    #     config_dir / "images/standardized",
+    #     img_dir,
+    #     size=img_size,
+    # )
     imgs_info = prepare_images(
-        config_dir / "images/standardized",
+        config_dir / "ascii/standardized",
         img_dir,
         size=img_size,
     )

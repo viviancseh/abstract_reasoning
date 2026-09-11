@@ -14,6 +14,7 @@ import sys
 disabled_funcs = {
     "EEGcap.connect": [False, "mock EEG device connected"],
     "EEGcap.send": [False, None],
+    "EEGcap.reset_port": [False, None],
     "EyeTracker.connect": [False, "mock Eye-tracker connected"],
     "EyeTracker.send": [False, None],
     "EyeTracker.get_file": [False, None],
@@ -27,7 +28,7 @@ disabled_funcs = {
     "EyeTracker.setup": [False, None],
     "EyeTracker.edf2asc": [False, None],
 }
-# disabled_funcs = {k: [True, f"DUMMY {k}"] for k in disabled_funcs.keys()} # ! TEMPORARY
+disabled_funcs = {k: [True, f"DUMMY {k}"] for k in disabled_funcs.keys()} # ! TEMPORARY
 # disabled_funcs = {k: [True, None] for k in disabled_funcs.keys()}  # ! TEMPORARY
 
 
@@ -66,6 +67,7 @@ class EEGcap:
         self.port_write.setData(0)
         # print(f"{data} ({data_int})=> sent to {self.device_name} device")
 
+    @disable_decorator(*disabled_funcs.get("EEGcap.reset_port", (False, None)))
     def reset_port(self):
         self.port_write.setData(255)  # Set all bits high
         core.wait(0.01)

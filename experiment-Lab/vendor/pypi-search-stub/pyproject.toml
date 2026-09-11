@@ -1,0 +1,13 @@
+[tool.poetry]
+name = "pypi-search"
+version = "1.2.1"
+description = "Local stub replacing the deleted PyPI package 'pypi-search'. Only exists to satisfy psychopy's declared dependency; not used by this project's experiment code (only referenced by psychopy's optional GUI plugin manager)."
+authors = ["stub"]
+packages = [{include = "pypi_search"}]
+
+[tool.poetry.dependencies]
+python = "*"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
