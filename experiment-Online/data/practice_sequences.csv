@@ -1,0 +1,7 @@
+item_id,figure1,figure2,figure3,figure4,figure5,figure6,figure7,figure8,choice1,choice2,choice3,choice4,solution,masked_idx,seq_order,choice_order,pattern,trial_type
+0,plus,plus,hashtag,hashtag,plus,plus,hashtag,hashtag,plus,quote,hashtag,percent,hashtag,7,10764352,1302,AABBAABB,practice
+1,dollar-sign,dollar-sign,quote,quote,dollar-sign,dollar-sign,quote,quote,quote,hashtag,dollar-sign,at,quote,7,60251437,1032,AABBAABB,practice
+2,tilde,tilde,angle-up,asterisk,tilde,tilde,angle-up,asterisk,equals,angle-up,tilde,asterisk,asterisk,7,12637450,0123,AABCAABC,practice
+3,equals,equals,tilde,exclamation,equals,equals,tilde,exclamation,equals,tilde,exclamation,at,exclamation,7,34215076,2301,AABCAABC,practice
+4,plus,at,dollar-sign,percent,plus,at,dollar-sign,percent,dollar-sign,plus,percent,at,percent,7,13456720,0213,ABCDABCD,practice
+5,percent,equals,less-than,hashtag,percent,equals,less-than,hashtag,equals,percent,hashtag,less-than,hashtag,7,31204657,0312,ABCDABCD,practice

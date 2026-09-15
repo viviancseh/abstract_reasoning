@@ -41,11 +41,6 @@ html {
     /* `pre` will also work if you don't need word wrapping */
 }
 
-.images img {
-    margin: 0 10px;
-    /* Adjusts spacing between images */
-}
-
 .center p {
     text-align: center;
     margin: 0;
@@ -59,16 +54,23 @@ html {
     display: flex;
     align-items: center;
     justify-content: center;
-    /* flex-wrap: wrap;
-    Allows images to wrap if not enough space */
+    flex-wrap: nowrap;
+    /* Forced onto a single line; icon size below shrinks with viewport width
+    instead of wrapping */
 }
 
-/* Additional styling to ensure images fit well within their containers */
+.images {
+    gap: 1vw;
+}
+
+/* Icon size scales with viewport width (clamped between a floor and a
+ceiling) so all 8 top-row images + 4 choices always fit on one line
+(source images are 640x640px, which is far too large to lay out un-constrained) */
 .images img {
-    max-height: 80%;
-    /* Adjusts image height to fit within the row */
-    max-width: 100%;
-    /* Ensures image does not exceed its container's width */
+    width: clamp(24px, 8vw, 100px);
+    height: clamp(24px, 8vw, 100px);
+    object-fit: contain;
+    flex-shrink: 1;
 }
 
 .correct-selection {

@@ -207,6 +207,8 @@ def get_sequences(save_dir: Union[str, Path], icons=None, patterns=None):
 
         sequences.append(sequences_i)
 
+    sync_sequences_to_experiments()
+
     return sequences
 
 
@@ -333,7 +335,37 @@ def get_practice_sequences(save_dir: Union[str, Path], icons=None, n_practice=2)
     practice_df.reset_index(drop=False, inplace=True, names=["item_id"])
     practice_df.to_csv(save_dir / "practice_sequences.csv", index=False)
 
+    sync_sequences_to_experiments()
+
     return practice_df
+
+
+def sync_sequences_to_experiments():
+    """Copy freshly generated sequence files from setup/sequences/ into
+    experiment-Lab and experiment-Online, so neither silently falls out of
+    sync with whatever setup.py last generated."""
+    src_dir = WD / "sequences"
+    lab_dir = WD.parent / "experiment-Lab" / "sequences"
+    online_dir = WD.parent / "experiment-Online" / "data"
+
+    lab_dir.mkdir(exist_ok=True, parents=True)
+    online_dir.mkdir(exist_ok=True, parents=True)
+
+    # experiment-Lab (PsychoPy) reads every session file, practice_sequences.csv,
+    # and items_mapping.json for the icon/pattern ID scheme.
+    for f in src_dir.glob("*.csv"):
+        shutil.copy2(f, lab_dir / f.name)
+    items_mapping = src_dir / "items_mapping.json"
+    if items_mapping.exists():
+        shutil.copy2(items_mapping, lab_dir / items_mapping.name)
+
+    # experiment-Online only loads session_1.csv and practice_sequences.csv
+    # (script-V2.js's sessionDataPath/practiceDataPath); it hardcodes its own
+    # icon-name mapping instead of reading items_mapping.json.
+    for name in ("session_1.csv", "practice_sequences.csv"):
+        f = src_dir / name
+        if f.exists():
+            shutil.copy2(f, online_dir / name)
 
 
 """
