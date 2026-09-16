@@ -12,14 +12,27 @@ html {
 .container {
     display: flex;
     flex-direction: column;
-    height: 100%;
+    align-items: center;
+    /* Sized to its own content (not height: 100%) so the three rows pack
+    together as one compact block that body's flex-centering places in the
+    middle of the screen, instead of being stretched across the full
+    viewport height with the top/bottom rows pulled far apart - matching
+    the lab experiment, which positions images at y = +/- one image-height
+    from center rather than spreading them across the whole window. */
 }
 
 .row {
-    flex: 1;
     display: flex;
     align-items: center;
     justify-content: center;
+}
+
+/* Keeps a stable gap between the top/bottom image rows regardless of
+whether the middle row currently holds the fixation cross, instruction
+text, or nothing (mid-trial) - without this the rows would jump closer
+together whenever #mid-row-text is emptied during a trial. */
+#middle-row {
+    min-height: 12vh;
 }
 
 .row.images img {
@@ -65,10 +78,13 @@ html {
 
 /* Icon size scales with viewport width (clamped between a floor and a
 ceiling) so all 8 top-row images + 4 choices always fit on one line
-(source images are 640x640px, which is far too large to lay out un-constrained) */
+(source images are 640x640px, which is far too large to lay out un-constrained).
+10vw echoes the lab experiment, which renders icons at a fixed 256px on its
+2560px-wide monitor - also ~10% of screen width - rather than capping them
+to a small fixed pixel size regardless of screen size. */
 .images img {
-    width: clamp(24px, 8vw, 100px);
-    height: clamp(24px, 8vw, 100px);
+    width: clamp(48px, 10vw, 200px);
+    height: clamp(48px, 10vw, 200px);
     object-fit: contain;
     flex-shrink: 1;
 }

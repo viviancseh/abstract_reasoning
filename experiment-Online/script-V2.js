@@ -67,7 +67,7 @@ let imagePaths = [
   "images/resized/tilde.png",
 ];
 
-let blankImage = "images/blank_image.png";
+// let blankImage = "images/blank_image.png"; // ! file doesn't exist -> 404 (harmless, img opacity is 0)
 let questionMarkImg = "images/resized/question-mark.png";
 // imagePaths = imagePaths.concat(["images/blank_image.png", "images/resized/question-mark.png"]);
 // console.log(imagePaths);
@@ -222,8 +222,10 @@ function preloadImages(imagePaths) {
 function initializeImageRows() {
 
   // const topRowImages = new Array(7).fill(blankImage).concat([questionMarkImg]);
-  const topRowImages = new Array(8).fill(blankImage);
-  const bottomRowImages = new Array(4).fill(blankImage);
+  // const topRowImages = new Array(8).fill(blankImage);
+  // const bottomRowImages = new Array(4).fill(blankImage);
+  const topRowImages = new Array(8).fill("");
+  const bottomRowImages = new Array(4).fill("");
 
   // * Function to add images to a row
   const addImagesToRow = (rowId, imageSources) => {
@@ -292,6 +294,11 @@ async function startImageSequence(
     // * Wait for the random period before starting the sequence
     // await new Promise((resolve) => setTimeout(resolve, interTrialTime));
     await delay(interTrialTime);
+
+    // Fixed extra 1s pause after the random ITI, matching
+    // experiment-Lab/experiment.py's core.wait(1) after the intertrial
+    // wait and before stimuli are drawn (experiment.py lines 1009/618).
+    await delay(1000);
 
     let topRowImages = imageSequences[i].topImages.map(
       (imageName) => images[imageName].src
