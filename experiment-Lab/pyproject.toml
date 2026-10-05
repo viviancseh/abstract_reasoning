@@ -23,18 +23,16 @@ dependencies = [
     "pendulum>=3.0.0",
     "loguru>=0.7.2",
     "rich>=13.7.1",
+    # dukpy 0.2.3 (picked on macOS) has no Windows wheel and needs a C compiler there
+    "dukpy>=0.3 ; sys_platform == 'win32'",
 ]
 
 # NOTE: pylink (SR-Research's EyeLink SDK) is intentionally NOT listed here.
 # Its package index (https://pypi.sr-research.com) doesn't serve responses that
 # uv's resolver accepts (same underlying issue tripped up newer pip versions
-# too). Install it manually after `uv sync`, directly into this project's venv:
-#   .venv/bin/pip install --index-url https://pypi.sr-research.com --no-cache-dir sr-research-pylink
-
-[tool.uv]
-environments = [
-    "sys_platform == 'darwin'",
-]
+# too). Install it manually after `uv sync` (see README.md):
+#   uv pip install pip
+#   uv run python -m pip install --index-url=https://pypi.sr-research.com sr-research-pylink
 
 [tool.uv.sources]
 pypi-search = { path = "vendor/pypi-search-stub" }
