@@ -321,9 +321,12 @@ def show_dialogue() -> dict:
     dict: A dictionary containing the collected session information.
     """
 
-    # * loop until we get a valid filename
+    # * loop until we get a valid filename and a new subject/session combination
+    error_msg = None
     while True:
         dlg = gui.Dlg()
+        if error_msg:
+            dlg.addText(f"ERROR: {error_msg}", color="red")
         dlg.addText("Subject info")
         # dlg.addField(key="age", label="age:", required=True)
         # dlg.addField(key="gender", label="gender:", required=True)
@@ -368,11 +371,23 @@ def show_dialogue() -> dict:
             1 <= len(edf_fname) <= 8,
         ]
 
+        # * check that this subject/session has not been run before
+        subj_id = str(sess_info["subj_id"]).zfill(2)
+        sess = str(sess_info["sess"]).zfill(2)
+        session_dir = results_dir / f"subj_{subj_id}/sess_{sess}"
+
         if not all(edf_name_conds):
-            print(
-                "ERROR: Invalid EDF filename. Name should be 1 to 8 characters long",
-                "and contain only letters, numbers, and underscores.",
+            error_msg = (
+                "Invalid EDF filename. Name should be 1 to 8 characters long "
+                "and contain only letters, numbers, and underscores."
             )
+            print(f"ERROR: {error_msg}")
+        elif session_dir.exists():
+            error_msg = (
+                f"Data for subject {subj_id}, session {sess} already exists "
+                f"({session_dir.relative_to(wd)}). Choose another ID or session."
+            )
+            print(f"ERROR: {error_msg}")
         else:
             break
 
