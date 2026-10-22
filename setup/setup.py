@@ -92,6 +92,10 @@ def get_sequences(save_dir: Union[str, Path], icons=None, patterns=None):
         ["ABCD EFG", "H"],
     ]
 
+    excluded_distractors = {
+        "ABCDEFGH": ["A", "F", "G"],
+    }
+
     save_dir = Path(save_dir / "sequences")
     save_dir.mkdir(exist_ok=True, parents=True)
 
@@ -173,11 +177,18 @@ def get_sequences(save_dir: Union[str, Path], icons=None, patterns=None):
             unique_items = list(set(seq))
             solution = seq[solution_idx]
 
+            pattern = pattern_IDs_inv[patterns[idx]]
+            excluded = [
+                seq[pattern.index(letter)]
+                for letter in excluded_distractors.get(pattern, [])
+            ]
+
             n = len(unique_items)
 
             if n > 4:
                 seq_choices = [solution] + random.sample(
-                    [i for i in unique_items if i != solution], k=3
+                    [i for i in unique_items if i != solution and i not in excluded],
+                    k=3,
                 )
             elif n <= 4:
                 seq_choices = unique_items + random.sample(
@@ -353,8 +364,15 @@ def sync_sequences_to_experiments():
 
     # experiment-Lab (PsychoPy) reads every session file, practice_sequences.csv,
     # and items_mapping.json for the icon/pattern ID scheme.
-    for f in src_dir.glob("*.csv"):
-        shutil.copy2(f, lab_dir / f.name)
+    # Only the experiment's own files -- setup/sequences/ also holds unrelated
+    # CSVs (e.g. the creai-app items) that don't belong in experiment-Lab.
+    lab_files = ["all_combinations.csv", "practice_sequences.csv"] + [
+        f.name for f in src_dir.glob("session_*.csv")
+    ]
+    for name in lab_files:
+        f = src_dir / name
+        if f.exists():
+            shutil.copy2(f, lab_dir / name)
     items_mapping = src_dir / "items_mapping.json"
     if items_mapping.exists():
         shutil.copy2(items_mapping, lab_dir / items_mapping.name)
